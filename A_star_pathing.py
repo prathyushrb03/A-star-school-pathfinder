@@ -1,7 +1,7 @@
 import numpy as np
-from school_map import map, label_lookup
+from school_map import map, label_lookup, valid_entries
 
-def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray, valid_path_index: int=0, possible_parent_indices: np.ndarray = np.array([label_lookup["Commons"], label_lookup["Media Center"]])):
+def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray, valid_path_index: int=0, possible_parent_indices: np.ndarray = np.array([label_lookup["Commons"], label_lookup["Media Center"], label_lookup["Cafeteria"]])):
     '''Find the shortest path from start_cord to end_cord given map
         end_cord can accept shape of:
             -(3,)
@@ -21,6 +21,14 @@ def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray
         '''Euclidean distance from input_cord to end_cord'''
         return np.linalg.norm(np.asarray(input_cord)[:2] - np.asarray(end_cord)[:2])
 
+    def is_valid_move(cord, neighbor):
+        '''Check whether neighbor can be reached from cord'''
+        cord_entries = valid_entries.get(cord, set())
+        neighbor_entries = valid_entries.get(neighbor, set())
+        if cord_entries or neighbor_entries:
+            return neighbor in cord_entries or cord in neighbor_entries
+        return True
+
     def neighbors(cord):
         '''Find valid map coordinates next to cord'''
         x, y = cord
@@ -32,10 +40,26 @@ def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray
             (x - 1, y),
             (x, y - 1),
         ]
-        return [neighbor for neighbor in possible_neighbors if neighbor in valid_coords and neighbor not in closed_set] # check if neighbor actually exists on the map
+        return [
+            neighbor
+            for neighbor in possible_neighbors
+            if neighbor in valid_coords
+            and neighbor not in closed_set
+            and is_valid_move(cord, neighbor)
+        ] # check if neighbor actually exists on the map and is entered from a valid entry point
 
     if np.ndim(end_cord) == 2: # only assign the end cord with lowest heuristic to start as a valid pathfinding target
         end_cord = np.asarray(min(end_cord, key=lambda cord: heuristic(cord, start_cord))) 
+
+    def add_entry_chain(valid_coords, cord):
+        '''Add room entry coordinates needed to reach cord'''
+        coords_to_check = [cord]
+        while coords_to_check:
+            check = coords_to_check.pop()
+            for entry in valid_entries.get(check, set()):
+                if entry not in valid_coords:
+                    valid_coords.add(entry)
+                    coords_to_check.append(entry)
 
     start = coord_key(start_cord)
     end = coord_key(end_cord)
@@ -47,6 +71,8 @@ def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray
         or coord_key(row) == end 
         or np.any(possible_parent_indicies == row[2])
     }
+    add_entry_chain(valid_coords, start)
+    add_entry_chain(valid_coords, end)
 
     if start not in valid_coords:
         raise ValueError("Start coordinate is not on the map")

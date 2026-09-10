@@ -144,10 +144,6 @@ class MapApp(App):
 
   def on_button_pressed(self, event:Button.Pressed) -> None:
 
-    def get_cell_label(self, x, y):
-      index = self.map_indicies[(x, y)]
-      return self.label_names.get(index, str(index))
-
     map_widget = self.query_one("#map-grid", WidgetMap)
     self.start_point = map_widget.start_point
     self.end_point = map_widget.end_point
@@ -168,10 +164,6 @@ class MapApp(App):
   
 
   def action_reset_selection(self):
-
-    def get_cell_label(self, x, y):
-      index = self.map_indicies[(x, y)]
-      return self.label_names.get(index, str(index))
 
     map_widget = self.query_one("#map-grid", WidgetMap) # accessing the instance
     map_widget.reset_selection()
