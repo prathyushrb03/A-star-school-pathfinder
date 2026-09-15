@@ -133,10 +133,11 @@ class MapApp(App):
     super().__init__() #still call parent __init__ from textual
     self.start_point = None
     self.end_point = None
+    self.best_path = None
   
   def compose(self) -> ComposeResult:
-    yield Header()
     yield WidgetMap(id="map-grid")
+    yield Header()
     with Horizontal(id="selection-bar"):
       yield Static(f"Start Point: {self.start_point if self.start_point != None else 'Make a selection'}", id="start-point", classes="selected-box")
       yield Static(f"End Point: {self.end_point if self.end_point != None else 'Make a selection'}", id="end-point", classes="selected-box")
@@ -163,8 +164,7 @@ class MapApp(App):
         button.add_class("path-hallway-cell")
   
 
-  def action_reset_selection(self):
-
+  def action_reset_selection(self): # this runs on start also for some reason but its not really an issue
     map_widget = self.query_one("#map-grid", WidgetMap) # accessing the instance
     map_widget.reset_selection()
     self.start_point = map_widget.start_point
@@ -175,15 +175,18 @@ class MapApp(App):
     self.query_one("#end-point", Static).update(f"End Point: {self.end_point if self.end_point != None else 'Make a selection'}")
 
     # reset button classes
-    for cordinate in self.best_path:
-      indexed_cordinate = np.append(cordinate, map_widget.map_indicies[cordinate[0],cordinate[1]])
-      cord_id = f"cell_{indexed_cordinate[0]}_{indexed_cordinate[1]}_{indexed_cordinate[2]}"
-      button = map_widget.query_one(f"#{cord_id}", Button)
-      button.remove_class("path-hallway-cell")
-      if indexed_cordinate[2] == label_lookup["Hallway"]:
-        button.add_class("hallway-cell")
-      else:
-        button.add_class("map-cell")
+    if self.best_path is not None: #add this to deal with start issues
+      for cordinate in self.best_path:
+        indexed_cordinate = np.append(cordinate, map_widget.map_indicies[cordinate[0],cordinate[1]])
+        cord_id = f"cell_{indexed_cordinate[0]}_{indexed_cordinate[1]}_{indexed_cordinate[2]}"
+        button = map_widget.query_one(f"#{cord_id}", Button)
+        button.remove_class("path-hallway-cell")
+        if indexed_cordinate[2] == label_lookup["Hallway"]:
+          button.add_class("hallway-cell")
+        else:
+          button.add_class("map-cell")
+
+    self.best_path = None # make sure to clean up best path
 
 
 if __name__ == "__main__":

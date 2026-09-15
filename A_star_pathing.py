@@ -35,10 +35,10 @@ def A_star_pathing(start_cord: np.ndarray, end_cord: np.ndarray, map: np.ndarray
         x = int(x)
         y = int(y)
         possible_neighbors = [ # check the 4 cordinates next to the current one
-            (x + 1, y),
             (x, y + 1),
-            (x - 1, y),
+            (x + 1, y),
             (x, y - 1),
+            (x - 1, y),
         ]
         return [
             neighbor
