@@ -6,9 +6,11 @@ The project includes a terminal UI built with Textual. It displays the map as a 
 
 ## Project Files
 
-- `main_ui.py` - Runs the interactive Textual map UI.
-- `A_star_pathing.py` - Contains the A* pathfinding function.
-- `school_map.py` - Stores the school map coordinates, room labels, and valid room entry points.
+- `src/app.py` - Runs the interactive Textual map UI.
+- `src/A_star_pathing.py` - Contains the A* pathfinding function.
+- `src/school_map.py` - Stores the school map coordinates, room labels, and valid room entry points.
+- `school_pathfinder.toml` - Stores the project requirements and run commands used by the installer.
+- `install.sh` - Installs the requirements listed in `school_pathfinder.toml`.
 - `map to cordinates.jpeg` - Reference image used to convert the school map into coordinates.
 
 ## How It Works
@@ -23,24 +25,26 @@ The `label` identifies what is at that coordinate. `0` is used for hallways, whi
 
 `A_star_pathing()` finds the shortest valid route between two coordinates. It walks through hallway tiles and can also use special room entry rules from `valid_entries` so rooms are only entered from realistic access points.
 
-## Requirements
+## Installation
 
-- Python 3
-- NumPy
-- Textual
-
-Install the required packages with:
+Install the required packages from `school_pathfinder.toml` with:
 
 ```bash
-python3 -m pip install numpy textual
+./install.sh
 ```
 
 ## Run the Interactive Map
 
-Start the terminal UI with:
+Start the browser-hosted map server with:
 
 ```bash
-python3 main_ui.py
+./.venv/bin/python serve.py
+```
+
+Then open this URL in your browser:
+
+```text
+http://127.0.0.1:8000
 ```
 
 In the app:
@@ -55,5 +59,5 @@ In the app:
 You can also run the pathfinding file directly to print an example route:
 
 ```bash
-python3 A_star_pathing.py
+PYTHONPATH=src ./.venv/bin/python -m A_star_pathing
 ```

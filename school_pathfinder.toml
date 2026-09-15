@@ -1,0 +1,47 @@
+[project]
+name = "school-pathfinder"
+version = "0.1.0"
+description = "A terminal UI for mapping school locations and finding routes with A* pathfinding."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "numpy>=2.0",
+  "textual>=8.0",
+  "textual-serve>=1.1",
+]
+
+[workspace]
+source-directory = "src"
+reference-assets = [
+  "map to cordinates.jpeg",
+]
+
+[modules]
+app = "app"
+pathfinding = "A_star_pathing"
+map-data = "school_map"
+web-server = "serve"
+
+[project.scripts]
+school-pathfinder = "app:main"
+
+[commands]
+terminal-ui = "PYTHONPATH=src python3 -m app"
+pathfinding-demo = "PYTHONPATH=src python3 -m A_star_pathing"
+web-server = "PYTHONPATH=src python3 serve.py"
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src",
+]
+testpaths = [
+  "tests",
+]

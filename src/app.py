@@ -105,21 +105,21 @@ class MapApp(App):
   }}
 
   .hallway-cell {{
-      background: yellow;
-      color: yellow;
-      border: solid white;
+      background: #D2B48C;
+      color: #D2B48C;
+      border: white;
   }}
 
   .path-hallway-cell {{
-      background: blue;
-      color: blue;
-      border: solid white;
+      background: red;
+      color: black;
+      border: white;
   }}
 
   .map-cell {{
-      background: red;
-      color: red;
-      border: solid blue;
+      background: white;
+      color: black;
+      border: black;
   }}
 
   .empty-cell {{
@@ -189,5 +189,10 @@ class MapApp(App):
     self.best_path = None # make sure to clean up best path
 
 
+
+def main() -> None:
+  MapApp().run()
+
+
 if __name__ == "__main__":
-    MapApp().run()
+  main()
