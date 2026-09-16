@@ -44,7 +44,7 @@ Start the browser-hosted map server with:
 Then open this URL in your browser:
 
 ```text
-http://127.0.0.1:8000
+http://localhost:8000
 ```
 
 In the app:
