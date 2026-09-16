@@ -2,7 +2,7 @@
 
 School Mapping is a small Python project for representing a school floor plan as grid coordinates and finding routes through it with A* pathfinding.
 
-The project includes a terminal UI built with Textual. It displays the map as a grid, lets you select a start and end location, and highlights the shortest valid path between them.
+The project includes a terminal UI built with Textual. It displays the map as a grid, lets the user select a start and end location, and highlights the shortest valid path between them.
 
 ## Project Files
 
@@ -41,7 +41,7 @@ Start the browser-hosted map server with:
 ./.venv/bin/python serve.py
 ```
 
-Then open this URL in your browser:
+Then open:
 
 ```text
 http://localhost:8000
@@ -53,6 +53,29 @@ In the app:
 - Click another map location to choose the end point.
 - The shortest path will be highlighted.
 - Press `r` to reset the selected points after a path has been drawn.
+
+## Run the GitHub Pages Version
+
+`serve.py` starts a local Python server with `textual_serve`, so it works on your computer
+at `http://localhost:8000` but cannot run directly on GitHub Pages. GitHub Pages only
+serves static files.
+
+The static version is `index.html`. It loads Pyodide in the browser, fetches the Python
+files in `src/`, and runs the map/pathfinding code client-side. For local testing, run:
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+Disclosure: `index.html` was written with substantial help from ChatGPT in writing that 
+The original school map data and Python pathfinding code live in `src/`, and the original
+textual-based terminal UI can be launched from `serve.py`.
 
 ## Run the Pathfinding Demo
 

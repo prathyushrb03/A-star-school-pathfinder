@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>School Pathfinder</title>
+    <style>
+      /* UI styling: this is normal browser CSS, not Python. */
+      :root {
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f8fa;
+        color: #1f2933;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 32px;
+      }
+
+      header {
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: end;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.7rem, 3vw, 2.45rem);
+        line-height: 1.1;
+      }
+
+      #status {
+        margin: 0;
+        min-height: 1.5rem;
+        color: #526170;
+      }
+
+      button {
+        border: 1px solid #aeb8c2;
+        background: #fff;
+        color: #17202a;
+        min-height: 38px;
+        border-radius: 7px;
+        padding: 8px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #667789;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .map-shell {
+        overflow: auto;
+        border: 1px solid #ccd4dc;
+        background: #e9eef3;
+        padding: 14px;
+      }
+
+      #map {
+        display: grid;
+        gap: 4px;
+        min-width: max-content;
+      }
+
+      .cell {
+        width: 58px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 2px;
+        font-size: 0.78rem;
+        line-height: 1;
+        text-align: center;
+        overflow-wrap: anywhere;
+      }
+
+      .empty {
+        background: transparent;
+      }
+
+      .hallway {
+        background: #d8c09b;
+        border-color: #c3a97d;
+      }
+
+      .room {
+        background: #fff;
+        border-color: #9eabb7;
+      }
+
+      .selected-start {
+        outline: 3px solid #2364aa;
+        outline-offset: 1px;
+      }
+
+      .selected-end {
+        outline: 3px solid #168f5a;
+        outline-offset: 1px;
+      }
+
+      .path {
+        background: #ef4e4e;
+        border-color: #bd2929;
+        color: #111;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(100vw - 20px, 1120px);
+          padding-top: 16px;
+        }
+
+        header {
+          display: grid;
+          align-items: start;
+        }
+
+        #reset {
+          width: 100%;
+        }
+
+        .cell {
+          width: 48px;
+          height: 38px;
+          font-size: 0.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- UI markup: this is the static page GitHub Pages serves. -->
+    <main>
+      <header>
+        <div>
+          <h1>School Pathfinder</h1>
+          <p id="status">Loading Python runtime...</p>
+        </div>
+        <button id="reset" disabled>Reset</button>
+      </header>
+      <div class="map-shell">
+        <div id="map" aria-label="School map"></div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <script>
+      // UI glue: this JavaScript talks to the browser DOM and to Pyodide.
+      const statusEl = document.getElementById("status");
+      const mapEl = document.getElementById("map");
+      const resetButton = document.getElementById("reset");
+
+      let pyodide;
+      let mapPayload;
+      let selectedStart = null;
+      let selectedEnd = null;
+
+      function setStatus(message) {
+        statusEl.textContent = message;
+      }
+
+      function cellKey(x, y) {
+        return `${x},${y}`;
+      }
+
+      function getCellButton(x, y) {
+        return mapEl.querySelector(`[data-key="${cellKey(x, y)}"]`);
+      }
+
+      function clearPath() {
+        mapEl.querySelectorAll(".path").forEach((button) => {
+          button.classList.remove("path");
+        });
+      }
+
+      function updateSelections() {
+        mapEl.querySelectorAll(".selected-start, .selected-end").forEach((button) => {
+          button.classList.remove("selected-start", "selected-end");
+        });
+
+        if (selectedStart) {
+          getCellButton(selectedStart.x, selectedStart.y)?.classList.add("selected-start");
+        }
+
+        if (selectedEnd) {
+          getCellButton(selectedEnd.x, selectedEnd.y)?.classList.add("selected-end");
+        }
+      }
+
+      function resetMap() {
+        selectedStart = null;
+        selectedEnd = null;
+        clearPath();
+        updateSelections();
+        setStatus("Select a start point.");
+      }
+
+      async function loadProjectPython() {
+        // Python loading: put existing .py files into Pyodide's in-browser filesystem.
+        const files = ["school_map.py", "A_star_pathing.py"];
+
+        await Promise.all(files.map(async (file) => {
+          const response = await fetch(`src/${file}`);
+          if (!response.ok) {
+            throw new Error(`Could not load src/${file}`);
+          }
+          pyodide.FS.writeFile(file, await response.text());
+        }));
+      }
+
+      async function getMapPayload() {
+        // Python logic: this code runs inside Pyodide, not as JavaScript.
+        const payloadJson = await pyodide.runPythonAsync(`
+# Convert the Python school_map data into JSON the browser UI can render.
+import json
+import numpy as np
+import school_map
+
+label_names = {value: key for key, value in school_map.label_lookup.items()}
+cells = []
+for x, y, label in school_map.map:
+    x = int(x)
+    y = int(y)
+    label = int(label)
+    cells.append({
+        "x": x,
+        "y": y,
+        "label": label,
+        "name": label_names.get(label, str(label)),
+        "is_hallway": label == school_map.label_lookup["Hallway"],
+    })
+
+json.dumps({
+    "min_x": int(np.min(school_map.map[:, 0])),
+    "max_x": int(np.max(school_map.map[:, 0])),
+    "min_y": int(np.min(school_map.map[:, 1])),
+    "max_y": int(np.max(school_map.map[:, 1])),
+    "width": int(np.max(school_map.map[:, 0]) - np.min(school_map.map[:, 0]) + 1),
+    "height": int(np.max(school_map.map[:, 1]) - np.min(school_map.map[:, 1]) + 1),
+    "cells": cells,
+})
+        `);
+
+        return JSON.parse(payloadJson);
+      }
+
+      async function findPath(start, end) {
+        // UI-to-Python bridge: convert the clicked browser cells into Python inputs.
+        const startPoint = [start.x, start.y, start.label];
+        const endPoint = [end.x, end.y, end.label];
+
+        // Python logic: this calls real A_star_pathing() function.
+        const pathJson = await pyodide.runPythonAsync(`
+# Run the route calculation with the existing Python function.
+import json
+import numpy as np
+import school_map
+from A_star_pathing import A_star_pathing
+
+path = A_star_pathing(
+    np.array(${JSON.stringify(startPoint)}),
+    np.array(${JSON.stringify(endPoint)}),
+    school_map.map,
+)
+json.dumps([[int(x), int(y)] for x, y in path])
+        `);
+
+        return JSON.parse(pathJson);
+      }
+
+      async function drawPath() {
+        // UI rendering: apply CSS classes to show the path Python returned.
+        clearPath();
+        const path = await findPath(selectedStart, selectedEnd);
+
+        for (const [x, y] of path) {
+          getCellButton(x, y)?.classList.add("path");
+        }
+
+        updateSelections();
+        setStatus(`Path found: ${path.length} steps. Reset to choose another route.`);
+      }
+
+      async function handleCellClick(cell) {
+        // UI behavior: track clicks and ask Python for a path after two selections.
+        if (selectedStart && selectedEnd) {
+          resetMap();
+        }
+
+        if (!selectedStart) {
+          selectedStart = cell;
+          updateSelections();
+          setStatus(`Start: ${cell.name}. Select an end point.`);
+          return;
+        }
+
+        selectedEnd = cell;
+        updateSelections();
+        setStatus(`Finding path from ${selectedStart.name} to ${selectedEnd.name}...`);
+
+        try {
+          await drawPath();
+        } catch (error) {
+          clearPath();
+          updateSelections();
+          setStatus(`No route found: ${error.message}`);
+        }
+      }
+
+      function renderMap() {
+        // UI rendering: build the clickable HTML grid from the Python map payload.
+        const cellsByKey = new Map(mapPayload.cells.map((cell) => [cellKey(cell.x, cell.y), cell]));
+        mapEl.style.gridTemplateColumns = `repeat(${mapPayload.width}, 58px)`;
+
+        for (let y = mapPayload.max_y; y >= mapPayload.min_y; y -= 1) {
+          for (let x = mapPayload.min_x; x <= mapPayload.max_x; x += 1) {
+            const cell = cellsByKey.get(cellKey(x, y));
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "cell";
+
+            if (!cell) {
+              button.classList.add("empty");
+              button.disabled = true;
+              mapEl.appendChild(button);
+              continue;
+            }
+
+            button.dataset.key = cellKey(x, y);
+            button.classList.add(cell.is_hallway ? "hallway" : "room");
+            button.textContent = cell.is_hallway ? "" : cell.name;
+            button.title = `${cell.name} (${x}, ${y})`;
+            button.addEventListener("click", () => handleCellClick(cell));
+            mapEl.appendChild(button);
+          }
+        }
+      }
+
+      async function main() {
+        // Startup: load Python, load NumPy, load project files, then render the UI.
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage("numpy");
+        await loadProjectPython();
+
+        mapPayload = await getMapPayload();
+        renderMap();
+        resetButton.disabled = false;
+        resetButton.addEventListener("click", resetMap);
+        setStatus("Select a start point.");
+      }
+
+      main().catch((error) => {
+        console.error(error);
+        setStatus(`Could not start the app: ${error.message}`);
+      });
+    </script>
+  </body>
+</html>
