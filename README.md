@@ -73,7 +73,7 @@ Then open:
 http://localhost:8000
 ```
 
-Disclosure: `index.html` was written with substantial help from ChatGPT in writing that 
+Disclosure: `index.html` was written with substantial help from ChatGPT. 
 The original school map data and Python pathfinding code live in `src/`, and the original
 textual-based terminal UI can be launched from `serve.py`.
 
