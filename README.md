@@ -56,6 +56,14 @@ In the app:
 
 ## Run the GitHub Pages Version
 
+Can be found here:
+
+```bash
+https://prathyushrb03.github.io/A-star-school-pathfinder/
+```
+
+## Run the Local Version
+
 `serve.py` starts a local Python server with `textual_serve`, so it works on your computer
 at `http://localhost:8000` but cannot run directly on GitHub Pages. GitHub Pages only
 serves static files.
